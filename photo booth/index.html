@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📸 FunBooth</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+    * {
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: #fff;
+      gap: 12px;
+    }
+
+    /* Stylish Photo Booth Title */
+    h1.photobooth-title {
+      font-size: 36px;
+      font-weight: 800;
+      background: linear-gradient(90deg, #ffb84d, #ff5e62);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
+      margin: 0;
+    }
+
+    .photobooth {
+      background: #111;
+      padding: 24px;
+      border-radius: 24px;
+      width: 400px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      position: relative;
+    }
+
+    video, canvas {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 20px;
+      object-fit: cover;
+      border: 4px solid #000;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .filters button {
+      background: #222;
+      border: none;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: 0.2s;
+    }
+
+    .filters button:hover {
+      background: #444;
+    }
+
+    .filters button.active {
+      background: #ffb84d;
+      color: #111;
+      font-weight: 600;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      margin-top: 10px;
+      gap: 8px;
+    }
+
+    .controls button {
+      background: #ffb84d;
+      border: none;
+      color: #111;
+      font-weight: 700;
+      padding: 10px 20px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: 0.3s;
+      font-size: 14px;
+    }
+
+    .controls button:hover {
+      background: #ffd580;
+    }
+
+    .count-text {
+      color: #fff;
+      font-weight: 600;
+      font-size: 16px;
+      align-self: center;
+    }
+
+    .strip-section {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      margin-top: 10px;
+    }
+
+    .photo-strip {
+      background: #fff;
+      border-radius: 24px;
+      padding: 24px 16px 32px 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    /* Date at bottom */
+    .photo-strip::after {
+      content: "📸 FunBooth • " attr(data-date);
+      position: absolute;
+      bottom: 16px;
+      font-size: 14px;
+      color: #444;
+      font-weight: 600;
+      text-align: center;
+      width: 100%;
+    }
+
+    /* Watermark red heart */
+    .photo-strip::before {
+      content: "❤️";
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      font-size: 18px;
+      opacity: 0.6;
+    }
+
+    .photo-strip img {
+      width: 220px;
+      height: 220px;
+      object-fit: cover;
+      border-radius: 16px;
+      display: block;
+      margin: 8px 0;
+    }
+
+    .download-btns {
+      display: flex;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .download-btns button {
+      background: #ffb84d;
+      color: #111;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .download-btns button:hover {
+      background: #ffd580;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Title above the camera frame -->
+  <h1 class="photobooth-title">📸 Photo Booth</h1>
+
+  <div class="photobooth">
+    <video id="video" autoplay playsinline></video>
+
+    <div class="filters" id="filterButtons"></div>
+
+    <div class="controls">
+      <button id="captureBtn">📸 Capture</button>
+      <span class="count-text" id="countText">0/3</span>
+    </div>
+
+    <div class="strip-section" id="stripSection">
+      <div class="photo-strip" id="photoStrip"></div>
+      <div class="download-btns">
+        <button id="reshoot">🔁 Reshoot</button>
+        <button id="download">⬇️ Download</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const video = document.getElementById("video");
+    const captureBtn = document.getElementById("captureBtn");
+    const countText = document.getElementById("countText");
+    const stripSection = document.getElementById("stripSection");
+    const photoStrip = document.getElementById("photoStrip");
+    const reshoot = document.getElementById("reshoot");
+    const download = document.getElementById("download");
+    const filterButtons = document.getElementById("filterButtons");
+
+    const filters = [
+      { name: "Classic", filter: "none" },
+      { name: "Cartoon", filter: "contrast(140%) saturate(200%) hue-rotate(10deg)" },
+      { name: "Noir", filter: "grayscale(100%) contrast(130%)" },
+      { name: "Rainbow", filter: "hue-rotate(120deg) saturate(250%)" },
+      { name: "Retro", filter: "sepia(60%) contrast(120%) brightness(110%)" },
+      { name: "Funky", filter: "invert(15%) hue-rotate(180deg) saturate(300%)" },
+      { name: "Dreamy", filter: "blur(2px) brightness(110%) saturate(130%)" },
+      { name: "CoolBlue", filter: "hue-rotate(210deg) contrast(120%)" },
+    ];
+
+    let selectedFilter = filters[0].filter;
+    filters.forEach((f, i) => {
+      const btn = document.createElement("button");
+      btn.textContent = f.name;
+      if (i === 0) btn.classList.add("active");
+      btn.onclick = () => {
+        selectedFilter = f.filter;
+        document.querySelectorAll(".filters button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        video.style.filter = selectedFilter;
+      };
+      filterButtons.appendChild(btn);
+    });
+
+    let photos = [];
+
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+      } catch (err) {
+        alert("Camera access denied or unavailable: " + err.message);
+      }
+    }
+    startCamera();
+
+    captureBtn.onclick = () => {
+      if (photos.length >= 3) return;
+
+      const canvas = document.createElement("canvas");
+      const size = Math.min(video.videoWidth, video.videoHeight);
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx.filter = selectedFilter;
+      ctx.drawImage(video, (video.videoWidth - size)/2, (video.videoHeight - size)/2, size, size, 0, 0, size, size);
+      photos.push(canvas.toDataURL("image/png"));
+      countText.textContent = `${photos.length}/3`;
+
+      if (photos.length === 3) showStrip();
+    };
+
+    function showStrip() {
+      stripSection.style.display = "flex";
+      photoStrip.innerHTML = "";
+      const today = new Date().toLocaleDateString('en-IN', {
+        day: 'numeric', month: 'short', year: 'numeric'
+      });
+      photoStrip.setAttribute("data-date", today);
+
+      photos.forEach(p => {
+        const img = document.createElement("img");
+        img.src = p;
+        photoStrip.appendChild(img);
+      });
+    }
+
+    reshoot.onclick = () => {
+      photos = [];
+      countText.textContent = "0/3";
+      stripSection.style.display = "none";
+    };
+
+    download.onclick = () => {
+      const stripCanvas = document.createElement("canvas");
+      const imgSize = 220, margin = 20;
+      stripCanvas.width = 260;
+      stripCanvas.height = imgSize * 3 + margin * 4 + 40;
+      const ctx = stripCanvas.getContext("2d");
+
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, stripCanvas.width, stripCanvas.height);
+
+      photos.forEach((p, i) => {
+        const img = new Image();
+        img.src = p;
+        img.onload = () => {
+          ctx.drawImage(img, 20, margin + i * (imgSize + margin), imgSize, imgSize);
+          if (i === 2) {
+            ctx.fillStyle = "#444";
+            ctx.font = "16px Poppins";
+            ctx.fillText("📸 FunBooth • " + new Date().toLocaleDateString(), 30, stripCanvas.height - 10);
+            ctx.fillStyle = "red";
+            ctx.font = "18px Poppins";
+            ctx.fillText("❤️", stripCanvas.width - 30, stripCanvas.height - 10);
+            const link = document.createElement("a");
+            link.download = "FunBooth_Strip.png";
+            link.href = stripCanvas.toDataURL("image/png");
+            link.click();
+          }
+        };
+      });
+    };
+  </script>
+
+</body>
+</html>
